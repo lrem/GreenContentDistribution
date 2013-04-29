@@ -51,7 +51,10 @@ public class Model {
 		r2cdn = parseMatrix(ipath + "r2cdn.int", routerCount, cdnCount);
 		topo = parseMatrix(ipath + "topo.txt", routerCount, routerCount);
 		locations = parseAL(ipath + "cdnl.int");
-
+		assert(locations.size() == cdnCount);
+		capacities = parseAL(ipath + "cdnc.int");
+		assert(capacities.size() == cdnCount);
+		
 		model = new IloCplex();
 		model.setParam(IloCplex.DoubleParam.TiLim, limit);
 		
@@ -85,7 +88,7 @@ public class Model {
 		cc = new IloNumVar[routerCount][cdnCount];
 		for(int i = 0; i < routerCount; i++)
 			for(int j = 0; j < cdnCount; j++)
-				cr[i][j] = model.numVar(0, Double.MAX_VALUE);
+				cc[i][j] = model.numVar(0, Double.MAX_VALUE);
 		sv = new IloNumVar[cdnCount][routerCount][routerCount];
 		for(int i = 0; i < cdnCount; i++)
 			for(int j = 0; j < routerCount; j++)
@@ -146,8 +149,8 @@ public class Model {
 					total.addTerm(1, f[src][j][i]);
 				}
 				IloLinearNumExpr cap = model.linearNumExpr();
-				assert(capacities.get(i).get(j) == capacities.get(j).get(i));
-				cap.addTerm(x[i][j], capacities.get(i).get(j));
+				assert(topo[i][j] == topo[j][i]);
+				cap.addTerm(x[i][j], topo[i][j]);
 				model.addLe(total, cap);
 			}
 
@@ -155,7 +158,7 @@ public class Model {
 		for(int cdn = 0; cdn < cdnCount; cdn++)
 			for(int i = 0; i < locations.get(cdn).size(); i++)
 			{
-				int loc = locations.get(cdn).get(i);
+				int loc = locations.get(cdn).get(i).intValue();
 				IloLinearNumExpr total = model.linearNumExpr();
 				for(int src = 0; src < routerCount; src++)
 					total.addTerm(1, sv[cdn][src][loc]);
@@ -225,6 +228,7 @@ public class Model {
 			ArrayList<T> row = new ArrayList<T>();
 			while(tok.hasMoreTokens())
 				row.add((T) Double.valueOf(tok.nextToken()));
+			ret.add(row);
 		}
 		return ret;
 	}
