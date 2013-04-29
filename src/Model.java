@@ -79,8 +79,19 @@ public class Model {
 				for(int k = 0; k < routerCount; k++)
 					f[i][j][k] = model.numVar(0, Double.MAX_VALUE);
 		cr = new IloNumVar[routerCount][routerCount];
+		for(int i = 0; i < routerCount; i++)
+			for(int j = 0; j < routerCount; j++)
+				cr[i][j] = model.numVar(0, Double.MAX_VALUE);
 		cc = new IloNumVar[routerCount][cdnCount];
-
+		for(int i = 0; i < routerCount; i++)
+			for(int j = 0; j < cdnCount; j++)
+				cr[i][j] = model.numVar(0, Double.MAX_VALUE);
+		sv = new IloNumVar[cdnCount][routerCount][routerCount];
+		for(int i = 0; i < cdnCount; i++)
+			for(int j = 0; j < routerCount; j++)
+				for(int k = 0; k < routerCount; k++)
+					sv[i][j][k] = model.numVar(0, Double.MAX_VALUE);
+		
 		// Flow constraints
 		for(int src = 0; src < routerCount; src++)
 			for(int middle = 0; middle < routerCount; middle++)
