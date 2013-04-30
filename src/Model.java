@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.PriorityQueue;
 import java.util.StringTokenizer;
 import java.util.logging.Logger;
 
@@ -46,6 +45,8 @@ public class Model {
 	public int relaxations = 0;
 
 	IloCplex model;
+	protected double [][] xcopy;
+	protected double [] ycopy;
 
 	public Model (String ipath, double alpha, double beta, double gamma, double cbw, double limit) 
 			throws IloException, IOException
@@ -222,64 +223,56 @@ public class Model {
 
 
 	protected void freezeInteger() throws UnknownObjectException, IloException {
+		ArrayList<Pair<Integer, Integer>> xrem = new ArrayList<Pair<Integer,Integer>>();
 		for(Pair<Integer, Integer> e: xToDo)
 		{
-			double v = model.getValue(x[e.a][e.b]);
+			double v = xcopy[e.a][e.b];
 			if(v == 1)
 			{
+				log.info("Taking edge (" + e.a + "," + e.b + ") with load = " + xcopy[e.a][e.b]);
 				IloLinearNumExpr exp = model.linearNumExpr();
 				exp.addTerm(1, x[e.a][e.b]);
 				model.addEq(exp, 1);
-				xToDo.remove(e);
+				xrem.add(e);
 			}
 			if(v == 0)
 			{
+				log.info("Killing edge (" + e.a + "," + e.b + ") with load = " + xcopy[e.a][e.b]);
 				IloLinearNumExpr exp = model.linearNumExpr();
 				exp.addTerm(1, x[e.a][e.b]);
 				model.addEq(exp, 0);
-				xToDo.remove(e);
+				xrem.add(e);
 			}
 		}
+		for(Pair<Integer, Integer> e: xrem)
+			xToDo.remove(e);
+		ArrayList<Integer> yrem = new ArrayList<Integer>();
 		for(int i: yToDo)
 		{
-			double v = model.getValue(y[i]);
+			double v = ycopy[i];
 			if(v == 1)
 			{
+				log.info("Taking cache " + i +" with load = " + ycopy[i]);
 				IloLinearNumExpr exp = model.linearNumExpr();
 				exp.addTerm(1, y[i]);
 				model.addEq(exp, 1);
-				yToDo.remove(i);				
+				yrem.add(i);				
 			}
 			if(v == 0)
 			{
+				log.info("Killing cache " + i +" with load = " + ycopy[i]);
 				IloLinearNumExpr exp = model.linearNumExpr();
 				exp.addTerm(1, y[i]);
 				model.addEq(exp, 0);
-				yToDo.remove(i);				
+				yrem.add(i);				
 			}
 		}
+		for(int i: yrem)
+			yToDo.remove(i);
 	}
 	
 	public boolean finished() {
 		return (xToDo.size() == 0) && (yToDo.size() == 0);
-	}
-	
-	protected void addEdge(int i, int j, PriorityQueue<Edge> edges) throws UnknownObjectException, IloException
-	{
-		System.err.println("Adding edge (" + i + "," + j + ")");
-		
-		if(j < i)
-		{
-			int tmp = i;
-			i = j;
-			j = tmp;
-		}
-
-		if(topo[i][j] > 0)
-		{
-			double v = model.getValue(x[i][j]);
-			edges.add(new Edge(i, j, v));
-		}
 	}
 	
 	private double [][] parseMatrix(String path, int rows, int columns) throws IOException {
@@ -321,6 +314,17 @@ public class Model {
 		BufferedReader reader = new BufferedReader(new FileReader(path));
 		String line = reader.readLine();
 		return Integer.valueOf(line);
+	}
+
+
+	protected void makeCopy() throws UnknownObjectException, IloException {
+		xcopy = new double[routerCount][routerCount];
+		for(int i = 0; i < routerCount; i++)
+			for(int j = 0; j < routerCount; j++)
+				xcopy[i][j] = model.getValue(x[i][j]);
+		ycopy = new double[routerCount];
+		for(int i = 0; i < routerCount; i++)
+			ycopy[i] = model.getValue(y[i]);
 	}
 }
 

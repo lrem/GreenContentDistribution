@@ -1,5 +1,6 @@
 import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
+import ilog.cplex.IloCplex.UnknownObjectException;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -18,6 +19,7 @@ public class SpanningTreeHeuristic extends Model {
 		model.solve();
 		relaxations++;
 		log.info("Relaxation status = " + model.getStatus() + " value = " + model.getObjValue());
+		makeCopy();
 		
 		HashSet<Integer> connected = new HashSet<Integer>();
 		connected.add(0);
@@ -50,17 +52,37 @@ public class SpanningTreeHeuristic extends Model {
 			xToDo.remove(Pair.of(e.a, e.b));
 		}
 	}
+
+	protected void addEdge(int i, int j, PriorityQueue<Edge> edges) throws UnknownObjectException, IloException
+	{
+		//System.err.println("Adding edge (" + i + "," + j + ")");
+		
+		if(j < i)
+		{
+			int tmp = i;
+			i = j;
+			j = tmp;
+		}
+
+		if(topo[i][j] > 0)
+		{
+			edges.add(new Edge(i, j, xcopy[i][j]));
+		}
+	}
+	
+
 	
 	public void step() throws IloException {
 		model.solve();
 		relaxations++;
+		makeCopy();
 		freezeInteger();
 		
 		Pair<Integer, Integer> be = null;
 		double bev = -1;
 		for(Pair<Integer, Integer> e: xToDo)
 		{
-			double v = model.getValue(x[e.a][e.b]);
+			double v = xcopy[e.a][e.b];
 			if(v > bev)
 			{
 				bev = v;
@@ -71,7 +93,7 @@ public class SpanningTreeHeuristic extends Model {
 		double bcv = -1;
 		for(int i: yToDo)
 		{
-			double v = model.getValue(y[i]);
+			double v = ycopy[i];
 			if(v > bcv)
 			{
 				bcv = v;
@@ -80,13 +102,15 @@ public class SpanningTreeHeuristic extends Model {
 		}
 		if(bev > bcv)
 		{
+			log.info("Taking edge (" + be.a + "," + be.b + ") with load = " + xcopy[be.a][be.b]);
 			IloLinearNumExpr exp = model.linearNumExpr();
 			exp.addTerm(1, x[be.a][be.b]);
 			model.addEq(exp, 1);
-			xToDo.remove(be);		
+			xToDo.remove(be);
 		}
 		else
 		{
+			log.info("Taking cache " + bc +" with load = " + ycopy[bc]);
 			IloLinearNumExpr exp = model.linearNumExpr();
 			exp.addTerm(1, y[bc]);
 			model.addEq(exp, 1);
