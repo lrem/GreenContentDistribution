@@ -2,14 +2,18 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.StringTokenizer;
+import java.util.logging.Logger;
 
 import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.concert.IloObjectiveSense;
 import ilog.cplex.IloCplex;
+import ilog.cplex.IloCplex.UnknownObjectException;
 
 /**
  * The LP model of an instance
@@ -21,6 +25,7 @@ import ilog.cplex.IloCplex;
  */
 public class Model {
 
+	private static Logger log = Logger.getLogger("Model");
 	int routerCount;
 	int cdnCount;
 	double [][] r2r;
@@ -151,7 +156,7 @@ public class Model {
 				}
 				IloLinearNumExpr cap = model.linearNumExpr();
 				assert(topo[i][j] == topo[j][i]);
-				cap.addTerm(x[i][j], topo[i][j]);
+				cap.addTerm(x[j][i], topo[i][j]);
 				model.addLe(total, cap);
 			}
 
@@ -204,7 +209,54 @@ public class Model {
 
 	public void spanningTree() throws IloException {
 		model.solve();
+		log.info("Relaxation status = " + model.getStatus() + " value = " + model.getObjValue());
+		
+		HashSet<Integer> connected = new HashSet<Integer>();
+		connected.add(0);
+		
+		PriorityQueue<Edge> edges = new PriorityQueue<Edge>();
+		
+		
+		for(int i = 1; i < routerCount; i++)
+			addEdge(0, i, edges);
+		
+		while(connected.size() < routerCount)
+		{
+			Edge e = edges.remove();
+			int v;
+			if(connected.contains(e.a))
+				if(connected.contains(e.b))
+					continue;
+				else
+					v = e.b;
+			else
+				v = e.a;
+			connected.add(v);
+			for(int i = 0; i < routerCount; i++)
+				if(!connected.contains(i))
+					addEdge(v, i, edges);
+			IloLinearNumExpr exp = model.linearNumExpr();
+			exp.addTerm(1, x[e.a][e.b]);
+			model.addEq(exp, 1);
+		}
+	}
 
+	private void addEdge(int i, int j, PriorityQueue<Edge> edges) throws UnknownObjectException, IloException
+	{
+		System.err.println("Adding edge (" + i + "," + j + ")");
+		
+		if(j < i)
+		{
+			int tmp = i;
+			i = j;
+			j = tmp;
+		}
+
+		if(topo[i][j] > 0)
+		{
+			double v = model.getValue(x[i][j]);
+			edges.add(new Edge(i, j, v));
+		}
 	}
 	
 	private double [][] parseMatrix(String path, int rows, int columns) throws IOException {
@@ -248,3 +300,47 @@ public class Model {
 		return Integer.valueOf(line);
 	}
 }
+
+class Edge implements Comparator, Comparable {
+    public int a, b;
+    double weight;
+    
+    public Edge() {
+    }
+    
+    public Edge(int a, int b, double weight) {
+      this.a = a;
+      this.b = b;
+      this.weight = weight;
+    }
+    
+    public int compare(Object o1, Object o2) {
+      // Need all the ugliness due to add/remove
+      double w1 = ((Edge) o1).weight;
+      double w2 = ((Edge) o2).weight;
+      int a1 = ((Edge) o1).a;
+      int a2 = ((Edge) o2).a;
+      int b1   = ((Edge) o1).b;
+      int b2   = ((Edge) o2).b;
+
+      if (w1<w2)
+        return(-1);
+      else if (w1==w2 && a1==a2 && b1==b2)
+        return(0);
+      else if (w1==w2)
+        return(-1);
+      else if (w1>w2)
+        return(1); 
+      else
+        return(0);
+    }
+    
+    public int compareTo(Object o2) {
+    	return compare(this, o2);
+    }
+    
+    public boolean equals(Object obj) {
+      return compare(this, obj) == 0;
+    }
+  }
+
