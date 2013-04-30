@@ -27,6 +27,9 @@ public class Solve {
 		
 		Model model = new Model (ipath, alpha, beta, gamma, cbw, limit);
 		System.out.println("Model constructed");
+		
+		model.spanningTree();
+		System.out.println("Spanning tree calculated");
 	}
 
 }

@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.PriorityQueue;
 import java.util.StringTokenizer;
 
 import ilog.concert.IloException;
@@ -50,14 +51,14 @@ public class Model {
 		r2r = parseMatrix(ipath + "r2r.int", routerCount, routerCount);
 		r2cdn = parseMatrix(ipath + "r2cdn.int", routerCount, cdnCount);
 		topo = parseMatrix(ipath + "topo.txt", routerCount, routerCount);
-		locations = parseAL(ipath + "cdnl.int");
+		locations = parseAL(ipath + "cdnl.int", new Integer(3));
 		assert(locations.size() == cdnCount);
-		capacities = parseAL(ipath + "cdnc.int");
+		capacities = parseAL(ipath + "cdnc.int", new Double(3));
 		assert(capacities.size() == cdnCount);
-		
+
 		model = new IloCplex();
 		model.setParam(IloCplex.DoubleParam.TiLim, limit);
-		
+
 		IloLinearNumExpr obj = model.linearNumExpr();
 		x = new IloNumVar[routerCount][routerCount];
 		y = new IloNumVar[routerCount];
@@ -94,7 +95,7 @@ public class Model {
 			for(int j = 0; j < routerCount; j++)
 				for(int k = 0; k < routerCount; k++)
 					sv[i][j][k] = model.numVar(0, Double.MAX_VALUE);
-		
+
 		// Flow constraints
 		for(int src = 0; src < routerCount; src++)
 			for(int middle = 0; middle < routerCount; middle++)
@@ -158,7 +159,7 @@ public class Model {
 		for(int cdn = 0; cdn < cdnCount; cdn++)
 			for(int i = 0; i < locations.get(cdn).size(); i++)
 			{
-				int loc = locations.get(cdn).get(i).intValue();
+				int loc = locations.get(cdn).get(i);
 				IloLinearNumExpr total = model.linearNumExpr();
 				for(int src = 0; src < routerCount; src++)
 					total.addTerm(1, sv[cdn][src][loc]);
@@ -201,6 +202,11 @@ public class Model {
 		}
 			}
 
+	public void spanningTree() throws IloException {
+		model.solve();
+
+	}
+	
 	private double [][] parseMatrix(String path, int rows, int columns) throws IOException {
 		BufferedReader reader = new BufferedReader(new FileReader(path));
 		String line;
@@ -217,7 +223,7 @@ public class Model {
 	}
 
 	@SuppressWarnings("unchecked")
-	private <T extends Number> ArrayList<ArrayList<T>> parseAL(String path) throws NumberFormatException, IOException {
+	private <T extends Number> ArrayList<ArrayList<T>> parseAL(String path, T ignored) throws NumberFormatException, IOException {
 		BufferedReader reader = new BufferedReader(new FileReader(path));
 		String line;
 		ArrayList<ArrayList<T>> ret = new ArrayList<ArrayList<T>> ();
@@ -227,7 +233,10 @@ public class Model {
 				break;
 			ArrayList<T> row = new ArrayList<T>();
 			while(tok.hasMoreTokens())
-				row.add((T) Double.valueOf(tok.nextToken()));
+				if(ignored instanceof Integer)
+					row.add((T) Integer.valueOf(tok.nextToken()));
+				else
+					row.add((T) Double.valueOf(tok.nextToken()));
 			ret.add(row);
 		}
 		return ret;
