@@ -25,7 +25,7 @@ import ilog.cplex.IloCplex.UnknownObjectException;
  */
 public class Model {
 
-	private static Logger log = Logger.getLogger("Model");
+	protected static Logger log = Logger.getLogger("Model");
 	int routerCount;
 	int cdnCount;
 	double [][] r2r;
@@ -38,9 +38,12 @@ public class Model {
 	IloNumVar [][][] sv;
 	IloNumVar [][] cr;
 	IloNumVar [][] cc;
+	HashSet<Pair<Integer, Integer>> xToDo;
+	HashSet<Integer> yToDo;
 	double alpha, beta, gamma, cbw;
 	ArrayList<ArrayList<Integer>> locations;
 	ArrayList<ArrayList<Double>> capacities;
+	public int relaxations = 0;
 
 	IloCplex model;
 
@@ -205,43 +208,63 @@ public class Model {
 			up.addTerm(1, y[src]);
 			model.addLe(load, up);
 		}
+		
+		xToDo = new HashSet<Pair<Integer,Integer>>();
+		yToDo = new HashSet<Integer>();
+		for(int i = 0; i < routerCount; i++)
+		{		
+			for(int j = 0; j < i; j++)
+				if(topo[j][i] > 0)
+					xToDo.add(Pair.of(j, i));
+			yToDo.add(i);
+		}
 			}
 
-	public void spanningTree() throws IloException {
-		model.solve();
-		log.info("Relaxation status = " + model.getStatus() + " value = " + model.getObjValue());
-		
-		HashSet<Integer> connected = new HashSet<Integer>();
-		connected.add(0);
-		
-		PriorityQueue<Edge> edges = new PriorityQueue<Edge>();
-		
-		
-		for(int i = 1; i < routerCount; i++)
-			addEdge(0, i, edges);
-		
-		while(connected.size() < routerCount)
+
+	protected void freezeInteger() throws UnknownObjectException, IloException {
+		for(Pair<Integer, Integer> e: xToDo)
 		{
-			Edge e = edges.remove();
-			int v;
-			if(connected.contains(e.a))
-				if(connected.contains(e.b))
-					continue;
-				else
-					v = e.b;
-			else
-				v = e.a;
-			connected.add(v);
-			for(int i = 0; i < routerCount; i++)
-				if(!connected.contains(i))
-					addEdge(v, i, edges);
-			IloLinearNumExpr exp = model.linearNumExpr();
-			exp.addTerm(1, x[e.a][e.b]);
-			model.addEq(exp, 1);
+			double v = model.getValue(x[e.a][e.b]);
+			if(v == 1)
+			{
+				IloLinearNumExpr exp = model.linearNumExpr();
+				exp.addTerm(1, x[e.a][e.b]);
+				model.addEq(exp, 1);
+				xToDo.remove(e);
+			}
+			if(v == 0)
+			{
+				IloLinearNumExpr exp = model.linearNumExpr();
+				exp.addTerm(1, x[e.a][e.b]);
+				model.addEq(exp, 0);
+				xToDo.remove(e);
+			}
+		}
+		for(int i: yToDo)
+		{
+			double v = model.getValue(y[i]);
+			if(v == 1)
+			{
+				IloLinearNumExpr exp = model.linearNumExpr();
+				exp.addTerm(1, y[i]);
+				model.addEq(exp, 1);
+				yToDo.remove(i);				
+			}
+			if(v == 0)
+			{
+				IloLinearNumExpr exp = model.linearNumExpr();
+				exp.addTerm(1, y[i]);
+				model.addEq(exp, 0);
+				yToDo.remove(i);				
+			}
 		}
 	}
-
-	private void addEdge(int i, int j, PriorityQueue<Edge> edges) throws UnknownObjectException, IloException
+	
+	public boolean finished() {
+		return (xToDo.size() == 0) && (yToDo.size() == 0);
+	}
+	
+	protected void addEdge(int i, int j, PriorityQueue<Edge> edges) throws UnknownObjectException, IloException
 	{
 		System.err.println("Adding edge (" + i + "," + j + ")");
 		
@@ -301,6 +324,7 @@ public class Model {
 	}
 }
 
+@SuppressWarnings("rawtypes")
 class Edge implements Comparator, Comparable {
     public int a, b;
     double weight;
@@ -324,13 +348,13 @@ class Edge implements Comparator, Comparable {
       int b2   = ((Edge) o2).b;
 
       if (w1<w2)
-        return(-1);
+        return(1);
       else if (w1==w2 && a1==a2 && b1==b2)
         return(0);
       else if (w1==w2)
-        return(-1);
+        return(1);
       else if (w1>w2)
-        return(1); 
+        return(-1); 
       else
         return(0);
     }
@@ -344,3 +368,16 @@ class Edge implements Comparator, Comparable {
     }
   }
 
+class Pair<L,R> {
+    final L a;
+    final R b;
+
+    public Pair(L left, R right) {
+      this.a = left;
+      this.b = right;
+    }
+
+    static <L,R> Pair<L,R> of(L left, R right){
+        return new Pair<L,R>(left, right);
+    }
+}

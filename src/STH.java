@@ -10,7 +10,7 @@ import java.io.IOException;
  * @author lrem
  *
  */
-public class Solve {
+public class STH {
 
 	/**
 	 * @param args
@@ -25,11 +25,16 @@ public class Solve {
 		double cbw = Double.valueOf(args[4]);
 		double limit = Double.valueOf(args[5]);
 		
-		Model model = new Model (ipath, alpha, beta, gamma, cbw, limit);
+		SpanningTreeHeuristic model = new SpanningTreeHeuristic(ipath, alpha, beta, gamma, cbw, limit);
 		System.out.println("Model constructed");
 		
 		model.spanningTree();
 		System.out.println("Spanning tree calculated");
+		
+		while(!model.finished())
+			model.step();
+		
+		
 	}
 
 }
