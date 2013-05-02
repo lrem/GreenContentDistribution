@@ -297,6 +297,15 @@ public class Model {
 			zo.write(model.getValue(z[i]) + " ");
 		zo.write("\n");
 		zo.close();
+		BufferedWriter fo = new BufferedWriter(new FileWriter(path + "f.out"));
+		for(int i = 0; i < routerCount; i++)
+		{
+			for(int j = 0; j < routerCount; j++)
+				for(int k = 0; k < routerCount; k++)
+					fo.write(model.getValue(f[i][j][k]) + " ");
+			fo.write("\n");
+		}
+		fo.close();
 		// We don't use any more details of the solution right now
 		BufferedWriter ro = new BufferedWriter(new FileWriter(path + "relaxations.out"));
 		ro.write(relaxations + "\n");

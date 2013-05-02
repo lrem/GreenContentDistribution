@@ -78,6 +78,9 @@ public class SpanningTreeHeuristic extends Model {
 		makeCopy();
 		freezeInteger();
 		
+		if(finished())
+			return;
+		
 		Pair<Integer, Integer> be = null;
 		double bev = -1;
 		for(Pair<Integer, Integer> e: xToDo)
@@ -100,7 +103,7 @@ public class SpanningTreeHeuristic extends Model {
 				bc = i;
 			}
 		}
-		if(bev > bcv)
+		if((bev > bcv))
 		{
 			log.info("Taking edge (" + be.a + "," + be.b + ") with load = " + xcopy[be.a][be.b]);
 			IloLinearNumExpr exp = model.linearNumExpr();
