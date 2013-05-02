@@ -25,6 +25,9 @@ public class STH {
 		double cbw = Double.valueOf(args[4]);
 		double limit = Double.valueOf(args[5]);
 		
+		if(!ipath.endsWith("/"))
+			ipath += "/";
+		
 		SpanningTreeHeuristic model = new SpanningTreeHeuristic(ipath, alpha, beta, gamma, cbw, limit);
 		System.out.println("Model constructed");
 		
@@ -34,7 +37,7 @@ public class STH {
 		while(!model.finished())
 			model.step();
 		
-		
+		model.output(ipath);
 	}
 
 }

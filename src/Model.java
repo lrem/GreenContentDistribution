@@ -1,5 +1,7 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -273,6 +275,36 @@ public class Model {
 	
 	public boolean finished() {
 		return (xToDo.size() == 0) && (yToDo.size() == 0);
+	}
+	
+	public void output(String path) throws IOException, UnknownObjectException, IloException {
+		model.solve(); // Just to make sure we have all values in place
+		BufferedWriter xo = new BufferedWriter(new FileWriter(path + "x.out"));
+		for(int i = 0; i < routerCount; i++)
+		{
+			for(int j = 0; j < routerCount; j++)
+				xo.write(model.getValue(x[i][j]) + " ");
+			xo.write("\n");
+		}
+		xo.close();
+		BufferedWriter yo = new BufferedWriter(new FileWriter(path + "y.out"));
+		for(int i = 0; i < routerCount; i++)
+			yo.write(model.getValue(y[i]) + " ");
+		yo.write("\n");
+		yo.close();
+		BufferedWriter zo = new BufferedWriter(new FileWriter(path + "z.out"));
+		for(int i = 0; i < routerCount; i++)
+			zo.write(model.getValue(z[i]) + " ");
+		zo.write("\n");
+		zo.close();
+		// We don't use any more details of the solution right now
+		BufferedWriter ro = new BufferedWriter(new FileWriter(path + "relaxations.out"));
+		ro.write(relaxations + "\n");
+		ro.close();
+		BufferedWriter oo = new BufferedWriter(new FileWriter(path + "obj.out"));
+		oo.write(model.getObjValue() + "\n");
+		oo.close();
+		log.info("Final objective value = " + model.getObjValue());
 	}
 	
 	private double [][] parseMatrix(String path, int rows, int columns) throws IOException {
