@@ -24,11 +24,12 @@ public class STH {
 		double gamma = Double.valueOf(args[3]);
 		double cbw = Double.valueOf(args[4]);
 		double limit = Double.valueOf(args[5]);
+		double speedup = args.length > 6 ? Double.valueOf(args[6]) : 0.2;
 		
 		if(!ipath.endsWith("/"))
 			ipath += "/";
 		
-		SpanningTreeHeuristic model = new SpanningTreeHeuristic(ipath, alpha, beta, gamma, cbw, limit);
+		SpanningTreeHeuristic model = new FastSTH(ipath, alpha, beta, gamma, cbw, limit, speedup);
 		System.out.println("Model constructed");
 		
 		model.spanningTree();

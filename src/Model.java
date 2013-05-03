@@ -323,7 +323,7 @@ public class Model {
 		BufferedWriter oo = new BufferedWriter(new FileWriter(path + "obj.out"));
 		oo.write(model.getObjValue() + "\n");
 		oo.close();
-		log.info("Final objective value = " + model.getObjValue());
+		log.info("Final objective value = " + model.getObjValue() + " relaxations = " + relaxations);
 	}
 	
 	private void outputFailed(String path) throws IOException {

@@ -110,21 +110,24 @@ public class SpanningTreeHeuristic extends Model {
 			}
 		}
 		if((bev > bcv))
-		{
-			log.info("Taking edge (" + be.a + "," + be.b + ") with load = " + xcopy[be.a][be.b]);
-			IloLinearNumExpr exp = model.linearNumExpr();
-			exp.addTerm(1, x[be.a][be.b]);
-			model.addEq(exp, 1);
-			xToDo.remove(be);
-		}
+			freezeEdge(be);
 		else
-		{
-			log.info("Taking cache " + bc +" with load = " + ycopy[bc]);
-			IloLinearNumExpr exp = model.linearNumExpr();
-			exp.addTerm(1, y[bc]);
-			model.addEq(exp, 1);
-			yToDo.remove(bc);							
-		}
+			freezeCache(bc);
 	}
 	
+	protected void freezeEdge(Pair<Integer, Integer> be) throws IloException {
+		log.info("Taking edge (" + be.a + "," + be.b + ") with load = " + xcopy[be.a][be.b]);
+		IloLinearNumExpr exp = model.linearNumExpr();
+		exp.addTerm(1, x[be.a][be.b]);
+		model.addEq(exp, 1);
+		xToDo.remove(be);		
+	}
+
+	protected void freezeCache(Integer bc) throws IloException {
+		log.info("Taking cache " + bc +" with load = " + ycopy[bc]);
+		IloLinearNumExpr exp = model.linearNumExpr();
+		exp.addTerm(1, y[bc]);
+		model.addEq(exp, 1);
+		yToDo.remove(bc);									
+	}
 }
