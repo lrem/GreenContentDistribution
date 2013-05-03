@@ -1,5 +1,6 @@
 import ilog.concert.IloException;
 import ilog.concert.IloLinearNumExpr;
+import ilog.cplex.IloCplex;
 import ilog.cplex.IloCplex.UnknownObjectException;
 
 import java.io.IOException;
@@ -18,6 +19,11 @@ public class SpanningTreeHeuristic extends Model {
 	public void spanningTree() throws IloException {
 		model.solve();
 		relaxations++;
+		if(model.getStatus() != IloCplex.Status.Optimal)
+		{
+			fail();
+			return;
+		}
 		log.info("Relaxation status = " + model.getStatus() + " value = " + model.getObjValue());
 		makeCopy();
 		

@@ -273,12 +273,22 @@ public class Model {
 			yToDo.remove(i);
 	}
 	
+	protected void fail() {
+		xToDo.clear();
+		yToDo.clear();
+	}
+	
 	public boolean finished() {
 		return (xToDo.size() == 0) && (yToDo.size() == 0);
 	}
 	
 	public void output(String path) throws IOException, UnknownObjectException, IloException {
 		model.solve(); // Just to make sure we have all values in place
+		if(model.getStatus() != IloCplex.Status.Optimal)
+		{
+			outputFailed(path);
+			return;
+		}
 		BufferedWriter xo = new BufferedWriter(new FileWriter(path + "x.out"));
 		for(int i = 0; i < routerCount; i++)
 		{
@@ -316,6 +326,45 @@ public class Model {
 		log.info("Final objective value = " + model.getObjValue());
 	}
 	
+	private void outputFailed(String path) throws IOException {
+		BufferedWriter xo = new BufferedWriter(new FileWriter(path + "x.out"));
+		for(int i = 0; i < routerCount; i++)
+		{
+			for(int j = 0; j < routerCount; j++)
+				xo.write(-1 + " ");
+			xo.write("\n");
+		}
+		xo.close();
+		BufferedWriter yo = new BufferedWriter(new FileWriter(path + "y.out"));
+		for(int i = 0; i < routerCount; i++)
+			yo.write(-1 + " ");
+		yo.write("\n");
+		yo.close();
+		BufferedWriter zo = new BufferedWriter(new FileWriter(path + "z.out"));
+		for(int i = 0; i < routerCount; i++)
+			zo.write(-1 + " ");
+		zo.write("\n");
+		zo.close();
+		BufferedWriter fo = new BufferedWriter(new FileWriter(path + "f.out"));
+		for(int i = 0; i < routerCount; i++)
+		{
+			for(int j = 0; j < routerCount; j++)
+				for(int k = 0; k < routerCount; k++)
+					fo.write(-1 + " ");
+			fo.write("\n");
+		}
+		fo.close();
+		// We don't use any more details of the solution right now
+		BufferedWriter ro = new BufferedWriter(new FileWriter(path + "relaxations.out"));
+		ro.write(relaxations + "\n");
+		ro.close();
+		BufferedWriter oo = new BufferedWriter(new FileWriter(path + "obj.out"));
+		oo.write(-1 + "\n");
+		oo.close();
+		log.info("Final objective value = FAIL");		
+	}
+
+
 	private double [][] parseMatrix(String path, int rows, int columns) throws IOException {
 		BufferedReader reader = new BufferedReader(new FileReader(path));
 		String line;
